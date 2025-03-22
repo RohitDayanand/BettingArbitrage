@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
+from standardize_names import standardizeColumnNames
 
 # Checker to avoid duplicate and invalid table creation/queries
 def standardizeColumnNames(s):
@@ -22,7 +23,13 @@ def standardizeColumnNames(s):
     s = s.replace("-", "_")
     s = s.replace(",", "")
     s = s.replace(".", "")
-    s=  s.replace("°", "")
+    s = s.replace("°", "")
+    s = s.replace("’", "")
+    s = s.replace("‘", "")
+    s = s.replace("”", "")
+    s = s.replace(">", "plus_")
+    s = s.replace("<", "minus_")
+    s = s.replace("=", "equals_")
     if s[0].isdigit():
         s = "num_" + s
     return s
@@ -101,7 +108,7 @@ def scrape_polymarket(url, event_id, table_created, driver):
         print(f"Event: {market_name_text} | Yes: {yes_price} | No: {no_price}")
         # Close the driver and database connection
 
-        conn = sqlite3.connect(f"{event_id}.db")
+        conn = sqlite3.connect(f"{event_id}_kalshi.db")
         cursor = conn.cursor()
 
         # Save to database
@@ -120,7 +127,6 @@ def scrape_polymarket(url, event_id, table_created, driver):
             INSERT INTO {market_name_text} (market_name, yes_price, no_price) VALUES (?, ?, ?)""",
             (market_name_text, yes_price, no_price))
         conn.commit()
-        #conn.close()
     conn.commit()
     conn.close()
     print("Scraping completed")  # Close connection
@@ -129,35 +135,45 @@ def scrape_polymarket(url, event_id, table_created, driver):
 def initatizeKalshiScrape(event_id, event_url, iterations, driver):
     table_created = False
     counter = 0
-    time.sleep(7)  # Allow time for page to load
 
     while counter < iterations:
         scrape_polymarket(event_url, event_id, table_created, driver)  # Replace with actual event name
         counter += 1
         driver.refresh()
-        time.sleep(15 + int(random.uniform(5,10)))  # Run every minute
+        time.sleep(10 + int(random.uniform(5,10)))  # Run every minute
 
     driver.quit()
 
 def main():
     if len(sys.argv) < 3:
-        print("Please provide an event ID and a number of iterations (this scraper refreshes every ~30 seconds)" )
+        print("Please provide an event url and a number of iterations (this scraper refreshes every ~30 seconds)" )
         return
     else:
-        event_id = sys.argv[1]
-        iterations = sys.argv[2]
-        if not event_id.isnumeric():
+        event_url = ""
+        iterations = 0
+        try:
+            event_url = sys.argv[1]
+            iterations = int(sys.argv[2])
+            event_id = event_url.split("/")[-1]
+        except ValueError:
+            print("Please provide a valid event ID")
+        except IndexError:
+            print("Please provide a valid number of iterations")
+        except Exception as e:  
+            print("Error", e)
+        if not event_url:
             print("Please provide a valid event ID")
             return
-        if not iterations.isnumeric():
+        if not iterations:
             print("Please provide a valid number of iterations")
         if iterations <= 0 or iterations > 1000:
             print("Please provide a valid number of iterations, or not too many")
             return
     options = webdriver.ChromeOptions()
     options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--headless")  # Add this line to make the browser headless
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    initatizeKalshiScrape(f"{event_id}", f"https://kalshi.com/markets/{event_id}", iterations, driver)
+    initatizeKalshiScrape(event_id, event_url, iterations, driver)
 
 if __name__ == "__main__":
     main()
