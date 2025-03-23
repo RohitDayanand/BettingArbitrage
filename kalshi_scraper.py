@@ -12,28 +12,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 from standardize_names import standardizeColumnNames
 
-# Checker to avoid duplicate and invalid table creation/queries
-def standardizeColumnNames(s):
-    s = s.lower().replace(" ", "_")
-    s = s.replace("?", "")
-    s = s.replace(":", "")
-    s = s.replace("(", "")
-    s = s.replace(")", "")
-    s = s.replace("/", "")
-    s = s.replace("-", "_")
-    s = s.replace(",", "")
-    s = s.replace(".", "")
-    s = s.replace("°", "")
-    s = s.replace("’", "")
-    s = s.replace("‘", "")
-    s = s.replace("”", "")
-    s = s.replace(">", "plus_")
-    s = s.replace("<", "minus_")
-    s = s.replace("=", "equals_")
-    if s[0].isdigit():
-        s = "num_" + s
-    return s
-
 def init_db(event_name):
     conn = sqlite3.connect("scraper_demo1.db")
     cursor = conn.cursor()
